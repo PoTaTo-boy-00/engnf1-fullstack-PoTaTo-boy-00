@@ -47,3 +47,39 @@ export interface MyBookingsResponse {
     totalPages: number;
   };
 }
+export interface AdminBookingsResponse {
+  bookings: (Booking & {
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  })[];
+
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface AdminBookingFilters {
+  status?: BookingStatus;
+  resourceId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+}
+
+export interface AdminBookingsResponse {
+  data: Booking[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface RejectBookingInput {
+  note: string;
+}

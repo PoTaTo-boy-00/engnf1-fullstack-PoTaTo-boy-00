@@ -5,6 +5,8 @@ import type {
   ResourceListResponse,
   Resource,
   ResourceAvailability,
+  CreateResourceInput,
+  UpdateResourceInput,
 } from "@/types/resource";
 
 export const resourceService = {
@@ -36,6 +38,18 @@ getAvailability: async (
     }
   );
 
+  return response.data;
+},
+createResource: async (data: CreateResourceInput): Promise<Resource> => {
+  const response = await api.post<Resource>("/resources", data);
+  return response.data;
+},
+
+updateResource: async (
+  id: string,
+  data: UpdateResourceInput
+): Promise<Resource> => {
+  const response = await api.patch<Resource>(`/resources/${id}`, data);
   return response.data;
 },
 
