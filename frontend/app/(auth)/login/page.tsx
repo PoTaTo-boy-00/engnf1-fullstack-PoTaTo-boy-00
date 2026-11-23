@@ -19,14 +19,6 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-function getErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    return error.response?.data?.message || "Login failed. Please try again.";
-  }
-
-  return "Something went wrong. Please try again.";
-}
-
 export default function LoginPage() {
   const router = useRouter();
 
