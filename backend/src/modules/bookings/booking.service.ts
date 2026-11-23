@@ -1,4 +1,5 @@
 import { prisma } from "../../config/database";
+import { Prisma } from "../../generated/prisma/client";
 import { BookingError } from "../../utils/api-error";
 import {
   AdminBookingsQuery,
@@ -202,4 +203,71 @@ export async function getAllBookings(query: AdminBookingsQuery) {
       totalPages: Math.ceil(total / limit),
     },
   };
+}
+
+async function getBookingForTransition(
+  tx: Prisma.TransactionClient,
+  bookingId: string,
+) {
+  const booking = await tx.booking.findUnique({
+    where: { id: bookingId },
+  });
+
+  if (!booking) {
+    throw new BookingError("Booking not found", 404, "NOT_FOUND");
+  }
+  if (booking.startTime <= new Date()) {
+    throw new BookingError(
+      "Booking can no longer be modified",
+      409,
+      "CONFLICT",
+    );
+  }
+  return booking;
+}
+
+export async function cancelBooking(bookingId:string,userId:string){
+    return prisma.$transaction(async(tx)=>{
+            const booking = await getBookingForTransition(tx, bookingId);
+
+    if (booking.userId !== userId) {
+      throw new BookingError(
+        "You cannot cancel this booking",
+        403,
+        "FORBIDDEN"
+      );
+    }
+
+    if (!["PENDING", "APPROVED"].includes(booking.status)) {
+      throw new BookingError(
+        "This booking cannot be cancelled",
+        409,
+        "CONFLICT"
+      );
+    }
+    const result = await tx.booking.updateMany({
+      where: {
+        id: bookingId,
+        userId,
+        status: { in: ["PENDING", "APPROVED"] },
+        startTime: { gt: new Date() },
+      },
+      data: { status: "CANCELLED" },
+    });
+
+    if (result.count === 0) {
+      throw new BookingError(
+        "Booking can no longer be cancelled",
+        409,
+        "CONFLICT"
+      );
+    }
+
+    return tx.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+    });
+    },{
+     maxWait: 10000,
+      timeout: 30000,
+  })
 }
