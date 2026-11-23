@@ -2,6 +2,10 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import { errorHandler } from "./middleware/error.middleware";
+
+
+import authRoutes from "./modules/auth/auth.routes";
 
 const app = express();
 
@@ -16,6 +20,7 @@ app.get("/health", (_req, res) => {
 
 // API routes
 
+app.use("/api/auth", authRoutes);
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({
@@ -25,4 +30,7 @@ app.use((_req, res) => {
     },
   });
 });
+
+app.use(errorHandler);
+
 export default app;
