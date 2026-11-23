@@ -1,7 +1,7 @@
 
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.middleware";
-import { approveBookingController, cancelBookingController, createBookingController, getAllBookingsController, getMyBookingsController, rejectBookingController } from "./booking.controller";
+import { approveBookingController, cancelBookingController, createBookingController, getAllBookingsController, getBookingByIdController, getMyBookingsController, rejectBookingController } from "./booking.controller";
 import { requireAdmin } from "../../middleware/role.middleware";
 import { getAdminBookingStatsController } from "./booking.controller";
 
@@ -16,6 +16,7 @@ router.get("/mine", getMyBookingsController);
 router.get("/", requireAdmin, getAllBookingsController);
 
 
+router.get("/:id", authenticate, getBookingByIdController);
 router.patch("/:id/cancel", cancelBookingController);
 router.patch("/:id/approve", requireAdmin, approveBookingController);
 router.patch("/:id/reject", requireAdmin, rejectBookingController);

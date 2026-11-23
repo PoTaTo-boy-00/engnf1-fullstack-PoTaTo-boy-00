@@ -1,7 +1,7 @@
 
 import type { Request, Response, NextFunction } from "express";
-import { adminBookingsQuerySchema, createBookingSchema, myBookingsQuerySchema, rejectBookingSchema } from "./booking.validation";
-import { approveBooking, cancelBooking, createBooking, getAdminBookingStats, getAllBookings, getMyBookings, rejectBooking } from "./booking.service";
+import { adminBookingsQuerySchema, bookingIdSchema, createBookingSchema, myBookingsQuerySchema, rejectBookingSchema } from "./booking.validation";
+import { approveBooking, cancelBooking, createBooking, getAdminBookingStats, getAllBookings, getBookingById, getMyBookings, rejectBooking } from "./booking.service";
 
 export async function createBookingController(
   req: Request,
@@ -54,7 +54,35 @@ export async function getAllBookingsController(
   }
 }
 
+export const getBookingByIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = bookingIdSchema.parse(req.params);
 
+    if (!req.user) {
+      res.status(401).json({
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      });
+      return;
+    }
+
+    const booking = await getBookingById(
+      id,
+      req.user.id,
+      req.user.role
+    );
+
+    res.status(200).json({ booking });
+  } catch (error) {
+    next(error);
+  }
+};
 export async function cancelBookingController(
   req: Request,
   res: Response,

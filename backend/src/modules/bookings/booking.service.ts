@@ -108,6 +108,46 @@ export async function createBooking(userId: string, input: CreateBookingInput) {
   );
 }
 
+export const getBookingById = async (
+  bookingId: string,
+  userId: string,
+  userRole: "USER" | "ADMIN"
+) => {
+  const booking = await prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+    include: {
+      resource: true,
+      ticket: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  if (!booking) {
+    throw new BookingError("Booking not found", 404,"NOT_FOUND");
+  }
+
+  // ADMIN can access any booking.
+  if (userRole === "ADMIN") {
+    return booking;
+  }
+
+  // USER can access only their own booking.
+  if (booking.userId !== userId) {
+    throw new BookingError("You are not authorized to access this booking", 403,"FORBIDDEN");
+  }
+
+  return booking;
+};
+
 export async function getMyBookings(userId: string, query: MyBookingsQuery) {
   const limit = 10;
   const skip = (query.page - 1) * limit;
