@@ -1,0 +1,60 @@
+
+export type TicketCategory =
+  | "BILLING"
+  | "BUG"
+  | "FEATURE_REQUEST"
+  | "LOGIN"
+  | "DELIVERY";
+
+export type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export type TicketStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "RESOLVED"
+  | "CLOSED";
+
+
+export interface TicketEvent {
+  id: string;
+  ticketId: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  actor: string;
+  createdAt: string;
+}
+
+export interface Ticket {
+  id: string;
+  externalId: string;
+  subject: string;
+  body: string;
+  events?:TicketEvent[]
+  autoCategory: TicketCategory;
+  category: TicketCategory;
+  isHumanOverride: boolean;
+  priority: TicketPriority;
+  status: TicketStatus;
+  assigneeId: string | null;
+  isReviewed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketFilters {
+  status?: TicketStatus;
+  category?: TicketCategory;
+  priority?: TicketPriority;
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TicketListResponse {
+  data: Ticket[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
