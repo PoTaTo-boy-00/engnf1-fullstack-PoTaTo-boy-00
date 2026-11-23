@@ -92,6 +92,11 @@ export const rejectBookingSchema = z.object({
   note: z.string().trim().min(5).max(200),
 });
 
+export const bookingIdSchema = z.object({
+  id: z.string().uuid("Invalid booking ID"),
+});
+
+export type BookingIdParams = z.infer<typeof bookingIdSchema>;
 
 export type AdminBookingsQuery = z.infer<typeof adminBookingsQuerySchema>;
 
