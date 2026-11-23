@@ -6,6 +6,8 @@ import { errorHandler } from "./middleware/error.middleware";
 
 
 import authRoutes from "./modules/auth/auth.routes";
+import ticketRoutes from "./modules/tickets/ticket.routes";
+
 
 const app = express();
 
@@ -21,7 +23,7 @@ app.get("/health", (_req, res) => {
 // API routes
 
 app.use("/api/auth", authRoutes);
-
+app.use("/api/tickets", ticketRoutes);
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({

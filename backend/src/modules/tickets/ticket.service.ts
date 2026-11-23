@@ -1,24 +1,8 @@
-import { totalmem } from "node:os";
+
 import { prisma } from "../../config/database";
-import { classifyTicket } from "./ticket.classifier";
-import {
-  ImportTicketsInput,
-  TicketsQuery,
-  UpdateTicketInput,
-} from "./ticket.validation";
 import { Prisma } from "../../generated/prisma/client";
-
-const categories = [
-  "BILLING",
-  "BUG",
-  "FEATURE_REQUEST",
-  "LOGIN",
-  "DELIVERY",
-] as const;
-
-const priorities = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
-
-const statuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+import { classifyTicket } from "./ticket.classifier";
+import type { ImportTicketsInput,  TicketsQuery, UpdateTicketInput } from "./ticket.validation";
 
 export async function importTickets(input: ImportTicketsInput) {
   const result = {
@@ -28,91 +12,94 @@ export async function importTickets(input: ImportTicketsInput) {
     total: input.tickets.length,
   };
 
-  await prisma.$transaction(
-    async (tx) => {
-      for (const incoming of input.tickets) {
-        const existing = await tx.ticket.findUnique({
-          where: { externalId: incoming.externalId },
+  await prisma.$transaction(async (tx) => {
+    for (const incoming of input.tickets) {
+      const existing = await tx.ticket.findUnique({
+        where: { externalId: incoming.externalId },
+      });
+
+      const classification = classifyTicket(
+        incoming.subject,
+        incoming.body
+      );
+
+      if (!existing) {
+        await tx.ticket.create({
+          data: {
+            externalId: incoming.externalId,
+            subject: incoming.subject,
+            body: incoming.body,
+            autoCategory: classification.category,
+            category: classification.category,
+            priority: classification.priority,
+            status: "OPEN",
+            isHumanOverride: false,
+            isReviewed: false,
+          },
         });
 
-        const classification = classifyTicket(incoming.subject, incoming.body);
+        result.importedCount++;
+        continue;
+      }
 
-        if (!existing) {
-          await tx.ticket.create({
-            data: {
-              externalId: incoming.externalId,
-              subject: incoming.subject,
-              body: incoming.body,
-              autoCategory: classification.category,
-              category: classification.category,
-              priority: classification.priority,
-              status: "OPEN",
-              isHumanOverride: false,
-              isReviewed: false,
-            },
-          });
+      const contentChanged =
+        existing.subject !== incoming.subject ||
+        existing.body !== incoming.body;
 
-          result.importedCount++;
-          continue;
+      const updateData: {
+        subject?: string;
+        body?: string;
+        autoCategory?: typeof classification.category;
+        category?: typeof classification.category;
+        priority?: typeof classification.priority;
+      } = {};
+
+      if (existing.subject !== incoming.subject) {
+        updateData.subject = incoming.subject;
+      }
+
+      if (existing.body !== incoming.body) {
+        updateData.body = incoming.body;
+      }
+
+      if (existing.isHumanOverride) {
+        result.skippedOverrideCount++;
+      } else {
+        if (existing.autoCategory !== classification.category) {
+          updateData.autoCategory = classification.category;
         }
 
-        const contentChanged =
-          existing.subject !== incoming.subject ||
-          existing.body !== incoming.body;
-
-        const updateData: {
-          subject?: string;
-          body?: string;
-          autoCategory?: typeof classification.category;
-          category?: typeof classification.category;
-          priority?: typeof classification.priority;
-        } = {};
-
-        if (existing.subject !== incoming.subject) {
-          updateData.subject = incoming.subject;
+        if (existing.category !== classification.category) {
+          updateData.category = classification.category;
         }
 
-        if (existing.body !== incoming.body) {
-          updateData.body = incoming.body;
-        }
-
-        if (existing.isHumanOverride) {
-          result.skippedOverrideCount++;
-        } else {
-          if (existing.autoCategory !== classification.category) {
-            updateData.autoCategory = classification.category;
-          }
-
-          if (existing.category !== classification.category) {
-            updateData.category = classification.category;
-          }
-
-          if (existing.priority !== classification.priority) {
-            updateData.priority = classification.priority;
-          }
-        }
-
-        const classificationChanged =
-          !existing.isHumanOverride &&
-          (existing.autoCategory !== classification.category ||
-            existing.category !== classification.category ||
-            existing.priority !== classification.priority);
-
-        if (contentChanged || classificationChanged) {
-          await tx.ticket.update({
-            where: { id: existing.id },
-            data: updateData,
-          });
-
-          result.updatedCount++;
+        if (existing.priority !== classification.priority) {
+          updateData.priority = classification.priority;
         }
       }
-    },
-    {
-      maxWait: 10000,
-      timeout: 30000,
-    },
-  );
+
+      const classificationChanged =
+        !existing.isHumanOverride &&
+        (
+          existing.autoCategory !== classification.category ||
+          existing.category !== classification.category ||
+          existing.priority !== classification.priority
+        );
+
+      if (contentChanged || classificationChanged) {
+        await tx.ticket.update({
+          where: { id: existing.id },
+          data: updateData,
+        });
+
+        result.updatedCount++;
+      }
+    }
+  },
+{
+    maxWait: 10000,
+    timeout: 30000,
+  });
 
   return result;
 }
@@ -142,24 +129,21 @@ export async function getTickets(query: TicketsQuery) {
     }),
   };
 
-  const [tickets, total] = await prisma.$transaction(
-    [
-      prisma.ticket.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: {
-          createdAt: "desc",
-        },
-      }),
+  const [tickets, total] = await prisma.$transaction([
+    prisma.ticket.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
 
-      prisma.ticket.count({ where }),
-    ],
-    {
-      maxWait: 10000,
-      timeout: 30000,
-    },
-  );
+    prisma.ticket.count({ where }),
+  ],{
+    maxWait: 10000,
+    timeout: 30000,
+  });
 
   return {
     data: tickets,
@@ -188,10 +172,13 @@ export async function getTicketById(id: string) {
 
   return ticket;
 }
+
+
+
 export async function updateTicket(
   id: string,
   input: UpdateTicketInput,
-  actor: string,
+  actor: string
 ) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.ticket.findUnique({
@@ -214,7 +201,10 @@ export async function updateTicket(
       "status",
       "assigneeId",
     ] as const) {
-      if (input[field] !== undefined && input[field] !== existing[field]) {
+      if (
+        input[field] !== undefined &&
+        input[field] !== existing[field]
+      ) {
         changes.push({
           field,
           oldValue: existing[field] === null ? null : String(existing[field]),
@@ -228,7 +218,7 @@ export async function updateTicket(
     }
 
     const categoryChanged = changes.some(
-      (change) => change.field === "category",
+      (change) => change.field === "category"
     );
 
     const statusChangedFromOpen =
@@ -260,6 +250,19 @@ export async function updateTicket(
   });
 }
 
+
+const categories = [
+  "BILLING",
+  "BUG",
+  "FEATURE_REQUEST",
+  "LOGIN",
+  "DELIVERY",
+] as const;
+
+const priorities = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
+
+const statuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+
 export async function getTicketStats() {
   const [
     categoryGroups,
@@ -272,6 +275,7 @@ export async function getTicketStats() {
       by: ["category"],
       _count: { _all: true },
     }),
+
     prisma.ticket.groupBy({
       by: ["priority"],
       _count: { _all: true },
@@ -285,41 +289,42 @@ export async function getTicketStats() {
     prisma.ticket.count({
       where: { isReviewed: true },
     }),
-    prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
-        SELECT COUNT(*)::bigint AS count
-        FROM "tickets"
-        WHERE "isReviewed"=true
-            AND "category"="autoCategory"
-        `),
+
+   prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
+  SELECT COUNT(*)::bigint AS count
+  FROM "tickets"
+  WHERE "isReviewed" = true
+    AND "category" = "autoCategory"
+`),
   ]);
+
   const byCategory = Object.fromEntries(
     categories.map((category) => [
       category,
-      categoryGroups.find((item) => item.category === category)?._count._all ??
-        0,
-    ]),
+      categoryGroups.find((item) => item.category === category)?._count._all ?? 0,
+    ])
   );
 
   const byPriority = Object.fromEntries(
     priorities.map((priority) => [
       priority,
-      priorityGroups.find((item) => item.priority === priority)?._count._all ??
-        0,
-    ]),
+      priorityGroups.find((item) => item.priority === priority)?._count._all ?? 0,
+    ])
   );
 
   const byStatus = Object.fromEntries(
     statuses.map((status) => [
       status,
       statusGroups.find((item) => item.status === status)?._count._all ?? 0,
-    ]),
+    ])
   );
 
-  const matchingCount = Number(agreementCount[0]?.count ?? 0);
-  const modelAgreementRate =
-    reviewedCount === 0
-      ? 0
-      : Number(((matchingCount / reviewedCount) * 100).toFixed(2));
+ const matchingCount = Number(agreementCount[0]?.count ?? 0);
+
+const modelAgreementRate =
+  reviewedCount === 0
+    ? 0
+    : Number(((matchingCount / reviewedCount) * 100).toFixed(2));
 
   return {
     byCategory,
