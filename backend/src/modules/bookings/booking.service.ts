@@ -1,5 +1,5 @@
 import { prisma } from "../../config/database";
-import { Prisma } from "../../generated/prisma/client";
+import { BookingStatus, Prisma } from "../../generated/prisma/client";
 import { BookingError } from "../../utils/api-error";
 import {
   AdminBookingsQuery,
@@ -355,4 +355,72 @@ export async function rejectBooking(
      maxWait: 10000,
       timeout: 30000,
   });
+}
+
+
+export async function getAdminBookingStats() {
+  const [
+    activeResources,
+    statusCounts,
+    topResources,
+    ticketStats,
+  ] = await prisma.$transaction([
+    prisma.resource.count({
+      where: { isActive: true },
+    }),
+
+    prisma.booking.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    }),
+
+    prisma.booking.groupBy({
+      by: ["resourceId"],
+      _count: { id: true },
+      orderBy: {
+        _count: { id: "desc" },
+      },
+      take: 3,
+    }),
+
+    prisma.ticket.count(),
+  ],{
+     maxWait: 10000,
+      timeout: 30000,
+  });
+
+  const bookingsByStatus: Record<BookingStatus,number>={
+    PENDING:0,
+    APPROVED:0,
+    REJECTED:0,
+    CANCELLED:0,
+  }
+  for(const item of statusCounts){
+    bookingsByStatus[item.status]=item._count.id
+  }
+  const resourceDetails=await prisma.resource.findMany({
+    where:{
+        id:{in: topResources.map((item)=>item.resourceId)}
+    },
+    select:{
+        id:true,
+        name:true,
+        type:true
+    }
+  })
+  const resourceMap=new Map(
+    resourceDetails.map((resource)=>[resource.id,resource])
+  )
+  
+  return {
+    activeResources,
+    bookingsByStatus,
+    topResources: topResources.map((item) => ({
+      ...resourceMap.get(item.resourceId),
+      bookingCount: item._count.id,
+    })),
+    ticketStats: {
+      totalTickets: ticketStats,
+    },
+  };
 }
