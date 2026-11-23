@@ -1,0 +1,190 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -------------------------
+// ENUMS
+// -------------------------
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TicketCategory {
+  BILLING
+  BUG
+  FEATURE_REQUEST
+  LOGIN
+  DELIVERY
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketEventField {
+  category
+  priority
+  status
+  assigneeId
+}
+
+enum ResourceType {
+  ROOM
+  LAB
+  EQUIPMENT
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// -------------------------
+// USER
+// -------------------------
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  assignedTickets Ticket[]
+  bookings        Booking[]
+
+  @@index([role])
+  @@map("users")
+}
+
+// -------------------------
+// TICKET
+// -------------------------
+
+model Ticket {
+  id               String         @id @default(uuid()) @db.Uuid
+  externalId       String         @unique
+  subject          String         @db.VarChar(150)
+  body             String         @db.VarChar(2000)
+
+  autoCategory     TicketCategory
+  category         TicketCategory
+
+  isHumanOverride  Boolean        @default(false)
+  priority         Priority       @default(MEDIUM)
+  status           TicketStatus   @default(OPEN)
+
+  assigneeId       String?        @db.Uuid
+  assignee         User?          @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  isReviewed       Boolean        @default(false)
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  events           TicketEvent[]
+  bookings         Booking[]
+
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([assigneeId])
+  @@index([createdAt])
+  @@index([status, category, priority])
+  @@map("tickets")
+}
+
+// -------------------------
+// TICKET EVENT / AUDIT TRAIL
+// -------------------------
+
+model TicketEvent {
+  id        String           @id @default(uuid()) @db.Uuid
+  ticketId  String           @db.Uuid
+  field     TicketEventField
+
+  oldValue  String?
+  newValue  String?
+
+  actor     String
+  createdAt DateTime         @default(now())
+
+  ticket    Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_events")
+}
+
+// -------------------------
+// RESOURCE
+// -------------------------
+
+model Resource {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @unique
+  type        ResourceType
+  capacity    Int
+  description String?      @db.VarChar(300)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  bookings    Booking[]
+
+  @@index([type])
+  @@index([isActive])
+  @@index([type, isActive])
+  @@map("resources")
+}
+
+// -------------------------
+// BOOKING
+// -------------------------
+
+model Booking {
+  id           String        @id @default(uuid()) @db.Uuid
+
+  resourceId   String        @db.Uuid
+  userId       String        @db.Uuid
+  ticketId     String?       @db.Uuid
+
+  startTime    DateTime
+  endTime      DateTime
+
+  purpose      String        @db.VarChar(200)
+  status       BookingStatus @default(PENDING)
+
+  decisionNote String?       @db.VarChar(200)
+
+  createdAt    DateTime      @default(now())
+
+  resource     Resource      @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ticket       Ticket?       @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@index([resourceId, startTime, endTime])
+  @@index([userId, status, startTime])
+  @@index([status])
+  @@index([ticketId])
+  @@map("bookings")
+}
