@@ -13,7 +13,7 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-// Health checr
+// Health check
 app.get("/health", (_req, res) => {
   res.status(200).json({ message: "TriageSync API is running" });
 });
@@ -21,6 +21,7 @@ app.get("/health", (_req, res) => {
 // API routes
 
 app.use("/api/auth", authRoutes);
+
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({
