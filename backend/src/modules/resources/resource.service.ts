@@ -105,6 +105,7 @@ export async function getResourceAvailability(
       endTime: { gt: from },
     },
     select: {
+      id:true,
       startTime: true,
       endTime: true,
       status: true,

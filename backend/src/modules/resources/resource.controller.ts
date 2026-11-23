@@ -91,7 +91,7 @@ export async function getResourceAvailabilityController(
 ) {
   try {
     const query = availabilityQuerySchema.parse(req.query);
-
+    console.log(query)
     const result = await getResourceAvailability(
       req.params.id as string,
       req.user!.role,

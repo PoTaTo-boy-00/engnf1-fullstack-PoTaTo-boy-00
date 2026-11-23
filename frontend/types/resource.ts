@@ -41,3 +41,18 @@ export interface ResourceAvailability {
   to: string;
   bookings: ResourceBooking[];
 }
+
+export interface CreateResourceInput {
+  name: string;
+  type: ResourceType;
+  capacity: number;
+  description?: string | null;
+}
+
+export interface UpdateResourceInput {
+  name?: string;
+  type?: ResourceType;
+  capacity?: number;
+  description?: string | null;
+  isActive?: boolean;
+}

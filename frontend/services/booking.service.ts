@@ -1,5 +1,8 @@
 import { api } from "@/lib/api";
 import {
+  
+    AdminBookingFilters,
+  AdminBookingsResponse,
   BookingStatus,
   CreateBookingInput,
   CreateBookingResponse,
@@ -20,7 +23,27 @@ export const bookingService = {
     return response.data;
   },
   async cancelBooking(id: string) {
-  const response = await api.patch(`/bookings/${id}/cancel`);
+    const response = await api.patch(`/bookings/${id}/cancel`);
+    return response.data;
+  },
+ async getAllBookings(params: AdminBookingFilters = {}) {
+  const response = await api.get<AdminBookingsResponse>(
+    "/bookings",
+    { params }
+  );
+
   return response.data;
-}
+},
+  async approveBooking(id: string) {
+    const response = await api.patch(`/bookings/${id}/approve`);
+    return response.data;
+  },
+
+  async rejectBooking(id: string, note: string) {
+    const response = await api.patch(`/bookings/${id}/reject`, {
+      note,
+    });
+
+    return response.data;
+  },
 };
