@@ -226,38 +226,79 @@ async function getBookingForTransition(
   return booking;
 }
 
-export async function cancelBooking(bookingId:string,userId:string){
-    return prisma.$transaction(async(tx)=>{
-            const booking = await getBookingForTransition(tx, bookingId);
+export async function cancelBooking(bookingId: string, userId: string) {
+  return prisma.$transaction(
+    async (tx) => {
+      const booking = await getBookingForTransition(tx, bookingId);
 
-    if (booking.userId !== userId) {
-      throw new BookingError(
-        "You cannot cancel this booking",
-        403,
-        "FORBIDDEN"
-      );
-    }
+      if (booking.userId !== userId) {
+        throw new BookingError(
+          "You cannot cancel this booking",
+          403,
+          "FORBIDDEN",
+        );
+      }
 
-    if (!["PENDING", "APPROVED"].includes(booking.status)) {
+      if (!["PENDING", "APPROVED"].includes(booking.status)) {
+        throw new BookingError(
+          "This booking cannot be cancelled",
+          409,
+          "CONFLICT",
+        );
+      }
+      const result = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          userId,
+          status: { in: ["PENDING", "APPROVED"] },
+          startTime: { gt: new Date() },
+        },
+        data: { status: "CANCELLED" },
+      });
+
+      if (result.count === 0) {
+        throw new BookingError(
+          "Booking can no longer be cancelled",
+          409,
+          "CONFLICT",
+        );
+      }
+
+      return tx.booking.findUniqueOrThrow({
+        where: { id: bookingId },
+      });
+    },
+    {
+      maxWait: 10000,
+      timeout: 30000,
+    },
+  );
+}
+
+export async function approveBooking(bookingId: string) {
+  return prisma.$transaction(async (tx) => {
+    const booking = await getBookingForTransition(tx, bookingId);
+
+    if (booking.status !== "PENDING") {
       throw new BookingError(
-        "This booking cannot be cancelled",
+        "Only pending bookings can be approved",
         409,
         "CONFLICT"
       );
     }
+
     const result = await tx.booking.updateMany({
       where: {
         id: bookingId,
-        userId,
-        status: { in: ["PENDING", "APPROVED"] },
+        status: "PENDING",
         startTime: { gt: new Date() },
       },
-      data: { status: "CANCELLED" },
+      data: { status: "APPROVED" },
     });
 
     if (result.count === 0) {
       throw new BookingError(
-        "Booking can no longer be cancelled",
+        "Booking can no longer be approved",
         409,
         "CONFLICT"
       );
@@ -266,8 +307,52 @@ export async function cancelBooking(bookingId:string,userId:string){
     return tx.booking.findUniqueOrThrow({
       where: { id: bookingId },
     });
-    },{
+  },{
      maxWait: 10000,
       timeout: 30000,
-  })
+  });
+}
+
+export async function rejectBooking(
+  bookingId: string,
+  note: string
+) {
+  return prisma.$transaction(async (tx) => {
+    const booking = await getBookingForTransition(tx, bookingId);
+
+    if (booking.status !== "PENDING") {
+      throw new BookingError(
+        "Only pending bookings can be rejected",
+        409,
+        "CONFLICT"
+      );
+    }
+
+    const result = await tx.booking.updateMany({
+      where: {
+        id: bookingId,
+        status: "PENDING",
+        startTime: { gt: new Date() },
+      },
+      data: {
+        status: "REJECTED",
+        decisionNote: note,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new BookingError(
+        "Booking can no longer be rejected",
+        409,
+        "CONFLICT"
+      );
+    }
+
+    return tx.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+    });
+  },{
+     maxWait: 10000,
+      timeout: 30000,
+  });
 }
