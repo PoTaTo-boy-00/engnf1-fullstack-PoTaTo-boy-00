@@ -16,12 +16,17 @@ import { getAdminBookingStatsController } from "./modules/bookings/booking.contr
 import { requireAdmin } from "./middleware/role.middleware";
 
 const app = express();
+const clientUrl=process.env.CLIENT_URL
 
 // Security and request middleware
 app.use(helmet());
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      ...(clientUrl ? [clientUrl] : []),
+    ],
     credentials: true,
   }),
 );
