@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMyBookings } from "@/hooks/use-my-bookings";
 import { useCancelBooking } from "@/hooks/use-cancel-booking";
 import type { BookingStatus } from "@/types/booking";
+import { getApiError } from "@/lib/get-api-error";
 
 type StatusFilter = BookingStatus | "ALL";
 
@@ -87,9 +88,8 @@ export default function MyBookingsPage() {
     setCancelError("");
 
     cancelBooking.mutate(id, {
-      onError: (error) => {
-        setCancelError(getErrorMessage(error));
-      },
+      onError: (error) =>
+          setCancelError(getApiError(error))
     });
   }
 

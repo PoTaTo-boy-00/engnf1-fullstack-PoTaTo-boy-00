@@ -23,9 +23,9 @@ The platform uses PostgreSQL for persistent storage, an Express API for backend 
 
 | Service           | URL                           |
 | ----------------- | ----------------------------- |
-| Frontend          | [ADD FRONTEND DEPLOYMENT URL] |
-| Backend API       | [ADD BACKEND DEPLOYMENT URL]  |
-| GitHub Repository | [ADD PUBLIC REPOSITORY URL]   |
+| Frontend          | https://engnf1-fullstack-po-ta-to-boy-00-peach.vercel.app/ |
+| Backend API       | https://engnf1-fullstack-potato-boy-00.onrender.com/  |
+| GitHub Repository | https://github.com/PoTaTo-boy-00/engnf1-fullstack-PoTaTo-boy-00.git   |
 
 ## 3. Seeded Credentials
 
@@ -66,9 +66,9 @@ These are assessment/demo credentials. Do not use these passwords for production
 
 ### Database and Infrastructure
 
-- PostgreSQL hosted on [ADD PROVIDER]
-- Frontend hosting: [ADD PROVIDER]
-- Backend hosting: [ADD PROVIDER]
+- PostgreSQL hosted on NeonDB
+- Frontend hosting: Vercel
+- Backend hosting: Render
 
 ## 5. Folder Structure
 
@@ -112,7 +112,7 @@ Update this tree to match the actual repository before submission.
 
 ### Prerequisites
 
-- Node.js [ADD VERSION]
+- Node.js 
 - npm
 - PostgreSQL database
 - Git
@@ -120,8 +120,8 @@ Update this tree to match the actual repository before submission.
 ### Clone the repository
 
 ```bash
-git clone [YOUR_REPOSITORY_URL]
-cd [YOUR_REPOSITORY_NAME]
+git clone https://github.com/PoTaTo-boy-00/engnf1-fullstack-PoTaTo-boy-00.git
+cd engnf1-fullstack-PoTaTo-boy-00
 ```
 
 ### Backend setup
@@ -151,7 +151,7 @@ npx prisma migrate deploy
 Run the seed command:
 
 ```bash
-[ADD EXACT SEED COMMAND FROM backend/package.json]
+npm db:seed
 ```
 
 The seed operation is designed to be idempotent: running it multiple times should not create duplicate seed records.
@@ -321,7 +321,5 @@ Update this checklist to reflect only features that have actually been verified.
 ## 10. Known Limitations
 
 -  external ticket feed integration, The application currently uses seeded demo credentials for assessment evaluation.
-- email notification not implemented
-- [ADD LIMITATION: e.g. reporting/export capabilities, if not implemented]
-- [ADD ANY OTHER VERIFIED LIMITATIONS]
+
 

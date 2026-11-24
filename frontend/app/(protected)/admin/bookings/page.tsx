@@ -1,12 +1,12 @@
-
 "use client";
 
 import { useState } from "react";
+import { BookingStatus, AdminBookingFilters } from "@/types/booking";
 import {
-  BookingStatus,
-  AdminBookingFilters,
-} from "@/types/booking";
-import { useAdminBookings, useApproveBooking, useRejectBooking } from "@/hooks/use-admin-bookings";
+  useAdminBookings,
+  useApproveBooking,
+  useRejectBooking,
+} from "@/hooks/use-admin-bookings";
 import { useResources } from "@/hooks/use-resource";
 import { getApiError } from "@/lib/get-api-error";
 
@@ -37,19 +37,15 @@ export default function AdminBookingsPage() {
     page: 1,
   });
 
-  const [rejectingBookingId, setRejectingBookingId] =
-    useState<string | null>(null);
+  const [rejectingBookingId, setRejectingBookingId] = useState<string | null>(
+    null,
+  );
 
   const [rejectionNote, setRejectionNote] = useState("");
   const [actionError, setActionError] = useState("");
 
-  const {
-    data,
-    isPending,
-    isError,
-    isFetching,
-    error,
-  } = useAdminBookings(filters);
+  const { data, isPending, isError, isFetching, error } =
+    useAdminBookings(filters);
 
   const { data: resourcesData } = useResources({ page: 1, limit: 100 });
 
@@ -58,7 +54,7 @@ export default function AdminBookingsPage() {
 
   function updateFilter<K extends keyof AdminBookingFilters>(
     key: K,
-    value: AdminBookingFilters[K]
+    value: AdminBookingFilters[K],
   ) {
     setFilters((previous) => ({
       ...previous,
@@ -75,9 +71,7 @@ export default function AdminBookingsPage() {
     approveBooking.mutate(id, {
       onError: (error) => {
         console.error("Approve booking failed:", error);
-        setActionError(
-          getApiError(error)
-        );
+        setActionError(getApiError(error));
       },
     });
   }
@@ -108,11 +102,9 @@ export default function AdminBookingsPage() {
         },
         onError: (error) => {
           console.error("Reject booking failed:", error);
-          setActionError(
-          getApiError(error)
-          );
+          setActionError(getApiError(error));
         },
-      }
+      },
     );
   }
 
@@ -134,7 +126,7 @@ export default function AdminBookingsPage() {
           onChange={(event) =>
             updateFilter(
               "status",
-              (event.target.value || undefined) as BookingStatus | undefined
+              (event.target.value || undefined) as BookingStatus | undefined,
             )
           }
           className="rounded-md border px-3 py-2 text-sm"
@@ -170,9 +162,7 @@ export default function AdminBookingsPage() {
             const value = event.target.value;
             updateFilter(
               "from",
-              value
-                ? new Date(`${value}T00:00:00`).toISOString()
-                : undefined
+              value ? new Date(`${value}T00:00:00`).toISOString() : undefined,
             );
           }}
           className="rounded-md border px-3 py-2 text-sm"
@@ -188,7 +178,7 @@ export default function AdminBookingsPage() {
               "to",
               value
                 ? new Date(`${value}T23:59:59.999`).toISOString()
-                : undefined
+                : undefined,
             );
           }}
           className="rounded-md border px-3 py-2 text-sm"
@@ -276,10 +266,7 @@ export default function AdminBookingsPage() {
 
             <div className="divide-y">
               {data.bookings.map((booking) => (
-                <article
-                  key={booking.id}
-                  className="space-y-4 p-4 sm:p-5"
-                >
+                <article key={booking.id} className="space-y-4 p-4 sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2 className="font-semibold">
@@ -292,7 +279,7 @@ export default function AdminBookingsPage() {
 
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusStyle(
-                        booking.status
+                        booking.status,
                       )}`}
                     >
                       {booking.status}
@@ -345,9 +332,7 @@ export default function AdminBookingsPage() {
                   {booking.decisionNote && (
                     <div className="rounded-md bg-gray-50 p-3">
                       <p className="text-xs text-gray-500">Decision note</p>
-                      <p className="mt-1 text-sm">
-                        {booking.decisionNote}
-                      </p>
+                      <p className="mt-1 text-sm">{booking.decisionNote}</p>
                     </div>
                   )}
 
@@ -356,8 +341,7 @@ export default function AdminBookingsPage() {
                       <button
                         type="button"
                         disabled={
-                          approveBooking.isPending ||
-                          rejectBooking.isPending
+                          approveBooking.isPending || rejectBooking.isPending
                         }
                         onClick={() => handleApprove(booking.id)}
                         className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
@@ -368,8 +352,7 @@ export default function AdminBookingsPage() {
                       <button
                         type="button"
                         disabled={
-                          approveBooking.isPending ||
-                          rejectBooking.isPending
+                          approveBooking.isPending || rejectBooking.isPending
                         }
                         onClick={() => {
                           setRejectingBookingId(booking.id);
@@ -390,40 +373,36 @@ export default function AdminBookingsPage() {
 
         {/* Pagination */}
         {data && (
-         <footer className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
-  <p className="text-sm text-gray-500">
-    Page {data.pagination.page} of {data.pagination.totalPages}
-    {" · "}
-    {data.pagination.total} bookings
-  </p>
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
+            <p className="text-sm text-gray-500">
+              Page {data.pagination.page} of {data.pagination.totalPages}
+              {" · "}
+              {data.pagination.total} bookings
+            </p>
 
-  <div className="flex gap-2">
-    <button
-      type="button"
-      disabled={data.pagination.page <= 1 || isFetching}
-      onClick={() =>
-        updateFilter("page", data.pagination.page - 1)
-      }
-      className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-40"
-    >
-      Previous
-    </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={data.pagination.page <= 1 || isFetching}
+                onClick={() => updateFilter("page", data.pagination.page - 1)}
+                className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-40"
+              >
+                Previous
+              </button>
 
-    <button
-      type="button"
-      disabled={
-        data.pagination.page >= data.pagination.totalPages ||
-        isFetching
-      }
-      onClick={() =>
-        updateFilter("page", data.pagination.page + 1)
-      }
-      className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-40"
-    >
-      Next
-    </button>
-  </div>
-</footer>
+              <button
+                type="button"
+                disabled={
+                  data.pagination.page >= data.pagination.totalPages ||
+                  isFetching
+                }
+                onClick={() => updateFilter("page", data.pagination.page + 1)}
+                className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </footer>
         )}
       </section>
     </main>
