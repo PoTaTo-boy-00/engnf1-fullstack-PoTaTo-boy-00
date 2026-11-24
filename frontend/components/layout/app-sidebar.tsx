@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Ticket,
@@ -42,7 +42,7 @@ const adminLinks = [
   { label: "Analytics", href: "/admin", icon: ChartNoAxesCombined },
 ];
 
-export default function AppSidebar({
+ function AppSidebarContent({
   children,
 }: {
   children: React.ReactNode;
@@ -309,5 +309,17 @@ export default function AppSidebar({
         {children}
       </main>
     </div>
+  );
+}
+
+export default function AppSidebar({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+      <AppSidebarContent>{children}</AppSidebarContent>
+    </Suspense>
   );
 }
