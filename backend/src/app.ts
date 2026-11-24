@@ -17,7 +17,7 @@ import { requireAdmin } from "./middleware/role.middleware";
 
 const app = express();
 const clientUrl=process.env.CLIENT_URL
-
+console.log(clientUrl)
 // Security and request middleware
 app.use(helmet());
 app.use(

@@ -8,6 +8,7 @@ import {
 } from "@/types/booking";
 import { useAdminBookings, useApproveBooking, useRejectBooking } from "@/hooks/use-admin-bookings";
 import { useResources } from "@/hooks/use-resource";
+import { getApiError } from "@/lib/get-api-error";
 
 const statuses: BookingStatus[] = [
   "PENDING",
@@ -75,9 +76,7 @@ export default function AdminBookingsPage() {
       onError: (error) => {
         console.error("Approve booking failed:", error);
         setActionError(
-          error instanceof Error
-            ? error.message
-            : "Unable to approve booking."
+          getApiError(error)
         );
       },
     });
@@ -110,9 +109,7 @@ export default function AdminBookingsPage() {
         onError: (error) => {
           console.error("Reject booking failed:", error);
           setActionError(
-            error instanceof Error
-              ? error.message
-              : "Unable to reject booking."
+          getApiError(error)
           );
         },
       }

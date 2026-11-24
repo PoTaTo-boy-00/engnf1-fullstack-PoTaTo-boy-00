@@ -3,9 +3,8 @@ import axios from "axios";
 export function getApiError(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const responseData = error.response?.data;
-    // console.log(responseData.error.message)
+
     if (responseData?.error?.message) {
-      // console.log(responseData.error.message)
       return responseData.error.message;
     }
 

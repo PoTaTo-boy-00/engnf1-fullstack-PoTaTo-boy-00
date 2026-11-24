@@ -17,6 +17,7 @@ import {
   useCreateResource,
   useUpdateResource,
 } from "@/hooks/use-resource-mutations";
+import { getApiError } from "@/lib/get-api-error";
 
 const initialForm: CreateResourceInput = {
   name: "",
@@ -123,15 +124,15 @@ export default function ResourcesPage() {
         },
         {
           onSuccess: closeForm,
-          onError: () =>
-            setFormError("Unable to update resource. Please try again."),
+          onError: (error) =>
+          setFormError(getApiError(error))
         }
       );
     } else {
       createResource.mutate(payload, {
         onSuccess: closeForm,
-        onError: () =>
-          setFormError("Unable to create resource. Please try again."),
+        onError: (error) =>
+          setFormError(getApiError(error))
       });
     }
   }
@@ -347,9 +348,9 @@ export default function ResourcesPage() {
           </p>
         ) : isError ? (
           <p className="p-8 text-center text-sm text-red-600">
-            {error instanceof Error
-              ? error.message
-              : "Unable to load resources."}
+            {
+              getApiError(error)
+            }
           </p>
         ) : !data?.data.length ? (
           <p className="p-8 text-center text-sm text-gray-500">
