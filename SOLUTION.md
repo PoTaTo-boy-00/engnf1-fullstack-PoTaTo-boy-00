@@ -376,6 +376,48 @@ The indexes selected for TriageSync should be justified by the actual filtering 
 
 ---
 
+## Part C: Performance Measurement and Optimization
+
+**Endpoint:** `GET /api/tickets?limit=100`
+
+**Benchmark configuration:**
+- Dataset: 1,000 benchmark tickets
+- Requests: 30
+- Warm-up requests: 5
+
+### Before Optimization
+
+| Metric | Response Time |
+|---|---:|
+| Average | 1,142.15 ms |
+| Median | 1,072.60 ms |
+| P95 | 1,393.20 ms |
+
+### Optimization Applied
+
+Optimized the ticket import process by:
+- Replacing individual `findUnique()` calls with a single `findMany()` query.
+- Using `createMany()` for bulk insertion of new tickets.
+- Moving ticket classification outside the database transaction.
+
+This reduced unnecessary database round trips during ticket imports while preserving idempotency and human override protection.
+
+### After Optimization
+
+| Metric | Response Time |
+|---|---:|
+| Average | 1,139.09 ms |
+| Median | 1,095.23 ms |
+| P95 | 1,312.53 ms |
+
+### Observation
+
+The average response time improved by approximately 0.27%, which is not a significant improvement. The import optimization primarily improves import efficiency and does not directly optimize the ticket-listing query.
+
+**Trade-off:** Bulk insertion improves write efficiency, but existing records still require individual updates to preserve the current human override and update logic.
+
+---
+
 # Part D: What I Would Improve With One More Day
 
 Given another day of development, I would prioritise the following improvements:
