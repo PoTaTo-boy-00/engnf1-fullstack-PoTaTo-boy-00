@@ -9,6 +9,7 @@ Two AI tools were used during the development of TriageSync within the two-day a
 | ChatGPT | Technical discussions, architecture guidance, debugging, API integration, frontend implementation, database concurrency concepts, and documentation assistance |
 | OpenAI Codex | Code generation and development assistance, particularly for creating backend integration test files and test scenarios |
 
+
 ## 2. Areas Where AI Assisted
 
 AI tools were used to accelerate development in the following areas:
@@ -21,6 +22,9 @@ AI tools were used to accelerate development in the following areas:
 - Improving frontend component structure and form handling.
 - Reviewing API contracts and database operations.
 - Preparing project documentation.
+- Designing and developing the TriageSync marketing landing page, including page structure, visual layout, typography, responsive design, reusable components, and frontend styling.
+
+- Refining the landing page's visual presentation and user experience to maintain a consistent design across different screen sizes.
 
 AI-generated code was reviewed and adapted to the application's actual requirements before integration.
 
