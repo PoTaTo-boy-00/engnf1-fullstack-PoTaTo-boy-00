@@ -12,94 +12,114 @@ export async function importTickets(input: ImportTicketsInput) {
     total: input.tickets.length,
   };
 
-  await prisma.$transaction(async (tx) => {
-    for (const incoming of input.tickets) {
-      const existing = await tx.ticket.findUnique({
-        where: { externalId: incoming.externalId },
+  const preparedTickets = input.tickets.map((incoming) => ({
+    ...incoming,
+    classification: classifyTicket(incoming.subject, incoming.body),
+  }));
+
+  await prisma.$transaction(
+    async (tx) => {
+      const existingTickets = await tx.ticket.findMany({
+        where: {
+          externalId: {
+            in: preparedTickets.map((ticket) => ticket.externalId),
+          },
+        },
       });
 
-      const classification = classifyTicket(
-        incoming.subject,
-        incoming.body
+      const existingMap = new Map(
+        existingTickets.map((ticket) => [ticket.externalId, ticket])
       );
 
-      if (!existing) {
-        await tx.ticket.create({
-          data: {
-            externalId: incoming.externalId,
-            subject: incoming.subject,
-            body: incoming.body,
-            autoCategory: classification.category,
-            category: classification.category,
-            priority: classification.priority,
+      const newTickets = preparedTickets.filter(
+        (ticket) => !existingMap.has(ticket.externalId)
+      );
+
+      if (newTickets.length > 0) {
+        const created = await tx.ticket.createMany({
+          data: newTickets.map((ticket) => ({
+            externalId: ticket.externalId,
+            subject: ticket.subject,
+            body: ticket.body,
+            autoCategory: ticket.classification.category,
+            category: ticket.classification.category,
+            priority: ticket.classification.priority,
             status: "OPEN",
             isHumanOverride: false,
             isReviewed: false,
-          },
+          })),
+          skipDuplicates: true,
         });
 
-        result.importedCount++;
-        continue;
+        result.importedCount = created.count;
       }
 
-      const contentChanged =
-        existing.subject !== incoming.subject ||
-        existing.body !== incoming.body;
+      for (const incoming of preparedTickets) {
+        const existing = existingMap.get(incoming.externalId);
 
-      const updateData: {
-        subject?: string;
-        body?: string;
-        autoCategory?: typeof classification.category;
-        category?: typeof classification.category;
-        priority?: typeof classification.priority;
-      } = {};
+        if (!existing) continue;
 
-      if (existing.subject !== incoming.subject) {
-        updateData.subject = incoming.subject;
-      }
+        const classification = incoming.classification;
 
-      if (existing.body !== incoming.body) {
-        updateData.body = incoming.body;
-      }
+        const contentChanged =
+          existing.subject !== incoming.subject ||
+          existing.body !== incoming.body;
 
-      if (existing.isHumanOverride) {
-        result.skippedOverrideCount++;
-      } else {
-        if (existing.autoCategory !== classification.category) {
-          updateData.autoCategory = classification.category;
+        const updateData: {
+          subject?: string;
+          body?: string;
+          autoCategory?: typeof classification.category;
+          category?: typeof classification.category;
+          priority?: typeof classification.priority;
+        } = {};
+
+        if (existing.subject !== incoming.subject) {
+          updateData.subject = incoming.subject;
         }
 
-        if (existing.category !== classification.category) {
-          updateData.category = classification.category;
+        if (existing.body !== incoming.body) {
+          updateData.body = incoming.body;
         }
 
-        if (existing.priority !== classification.priority) {
-          updateData.priority = classification.priority;
+        if (existing.isHumanOverride) {
+          result.skippedOverrideCount++;
+        } else {
+          if (existing.autoCategory !== classification.category) {
+            updateData.autoCategory = classification.category;
+          }
+
+          if (existing.category !== classification.category) {
+            updateData.category = classification.category;
+          }
+
+          if (existing.priority !== classification.priority) {
+            updateData.priority = classification.priority;
+          }
+        }
+
+        const classificationChanged =
+          !existing.isHumanOverride &&
+          (
+            existing.autoCategory !== classification.category ||
+            existing.category !== classification.category ||
+            existing.priority !== classification.priority
+          );
+
+        if (contentChanged || classificationChanged) {
+          await tx.ticket.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+
+          result.updatedCount++;
         }
       }
-
-      const classificationChanged =
-        !existing.isHumanOverride &&
-        (
-          existing.autoCategory !== classification.category ||
-          existing.category !== classification.category ||
-          existing.priority !== classification.priority
-        );
-
-      if (contentChanged || classificationChanged) {
-        await tx.ticket.update({
-          where: { id: existing.id },
-          data: updateData,
-        });
-
-        result.updatedCount++;
-      }
+    },
+    {
+      maxWait: 10000,
+      timeout: 30000,
     }
-  },
-{
-    maxWait: 10000,
-    timeout: 30000,
-  });
+  );
 
   return result;
 }
